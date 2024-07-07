@@ -57,7 +57,7 @@ import sys
 import tempfile
 
 
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
 
 
 class ConversionException(Exception):
@@ -79,31 +79,35 @@ def ipynb2html(infile, outfile):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpfile = Path(tmpdir) / "submission.ipynb"
         shutil.copy(infile, tmpfile)
-        shell_step([
-            "jupyter-nbconvert",
-            tmpfile,
-            "--to", "html",
-            "--output", outfile,
-        ])
+        shell_step(
+            [
+                "jupyter-nbconvert",
+                tmpfile,
+                "--to",
+                "html",
+                "--output",
+                outfile,
+            ]
+        )
 
 
 def html2img(infile, outfile):
-    shell_step([
-        "wkhtmltoimage",
-        # FIXME: looks dangerous but otherwise "Exit with code 1 due to network error: ProtocolUnknownError"
-        "--enable-local-file-access",
-        "--disable-plugins",
-        "--quality", "1",  # enable PNG compression
-        infile,
-        outfile,
-    ])
+    shell_step(
+        [
+            "wkhtmltoimage",
+            # FIXME: looks dangerous but otherwise "Exit with code 1 due to network error: ProtocolUnknownError"
+            "--enable-local-file-access",
+            "--disable-plugins",
+            "--quality",
+            "1",  # enable PNG compression
+            infile,
+            outfile,
+        ]
+    )
+
 
 def img2pdf(infile, outfile):
-    shell_step([
-        "convert",
-        infile,
-        outfile
-    ])
+    shell_step(["convert", infile, outfile])
 
 
 def submission_converter(infile, username, outdir):
@@ -120,11 +124,11 @@ def submission_converter(infile, username, outdir):
     img2pdf(imgfile, pdffile)
 
     return imgfile, pdffile
-    
+
 
 def submission_assembler(username, origfile, imgfiles, pdffile, outdir):
     outpath = Path(outdir)
-    #prefix = "Attempt1_filesubmission_"
+    # prefix = "Attempt1_filesubmission_"
     prefix = "ipynb2moodle_"
     pdfupload = outpath / username / f"{prefix}{pdffile.name}"
     previewpath = outpath / username / f"{prefix}{pdffile.name}.rawImages"
@@ -138,7 +142,6 @@ def submission_assembler(username, origfile, imgfiles, pdffile, outdir):
         shutil.copy(imgin, imgout)
 
 
-
 def batch_process(fs):
     errors = 0
     for username, submission in fs.submissions():
@@ -146,8 +149,12 @@ def batch_process(fs):
             # FIXME: do we need to check there isn't already a PDF for this item?
             try:
                 logging.info("processing: %s", infile)
-                imgfile, pdffile = submission_converter(infile, username, fs.intermediate)
-                submission_assembler(username, infile.name, [imgfile], pdffile, fs.upload)
+                imgfile, pdffile = submission_converter(
+                    infile, username, fs.intermediate
+                )
+                submission_assembler(
+                    username, infile.name, [imgfile], pdffile, fs.upload
+                )
             except ConversionException as e:
                 logging.error("conversion of %s failed: %s", infile, str(e))
                 errors += 1
@@ -188,7 +195,9 @@ class FS:
         self.upload = (self.base / "output").absolute()
         self.upload.mkdir(parents=True, exist_ok=True)
 
-        self.uploadable = self.base / f"{name} uploadable"   # .zip will be added automatically
+        self.uploadable = (
+            self.base / f"{name} uploadable"
+        )  # .zip will be added automatically
         self.upload.mkdir(parents=True, exist_ok=True)
 
     def submissions(self):
@@ -202,7 +211,6 @@ class FS:
 
 
 if __name__ == "__main__":
-
     if len(sys.argv) != 2:
         print("USAGE: ipynb2moodle download.zip")
         sys.exit(1)
