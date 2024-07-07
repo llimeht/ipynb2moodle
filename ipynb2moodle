@@ -68,6 +68,7 @@ def shell_step(*args, **kwargs):
     proc = subprocess.run(
         *args,
         capture_output=True,
+        check=False,
         **kwargs,
     )
     if proc.returncode != 0:
@@ -95,7 +96,8 @@ def html2img(infile, outfile):
     shell_step(
         [
             "wkhtmltoimage",
-            # FIXME: looks dangerous but otherwise "Exit with code 1 due to network error: ProtocolUnknownError"
+            # FIXME: looks dangerous but otherwise:
+            # "Exit with code 1 due to network error: ProtocolUnknownError"
             "--enable-local-file-access",
             "--disable-plugins",
             "--quality",
@@ -126,7 +128,7 @@ def submission_converter(infile, username, outdir):
     return imgfile, pdffile
 
 
-def submission_assembler(username, origfile, imgfiles, pdffile, outdir):
+def submission_assembler(username, imgfiles, pdffile, outdir):
     outpath = Path(outdir)
     # prefix = "Attempt1_filesubmission_"
     prefix = "ipynb2moodle_"
@@ -152,9 +154,7 @@ def batch_process(fs):
                 imgfile, pdffile = submission_converter(
                     infile, username, fs.intermediate
                 )
-                submission_assembler(
-                    username, infile.name, [imgfile], pdffile, fs.upload
-                )
+                submission_assembler(username, [imgfile], pdffile, fs.upload)
             except ConversionException as e:
                 logging.error("conversion of %s failed: %s", infile, str(e))
                 errors += 1
@@ -224,4 +224,4 @@ if __name__ == "__main__":
     else:
         logging.info("CONVERSION COMPLETED")
 
-    sys.exit(status == 0)
+    sys.exit(status)
