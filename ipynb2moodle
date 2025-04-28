@@ -202,7 +202,7 @@ class FS:
 
     def submissions(self):
         logging.debug("Searching '%s'", self.downloaded)
-        for submission in self.downloaded.glob("*_*"):
+        for submission in sorted(self.downloaded.glob("*_*")):
             logging.debug("Testing '%s'", submission)
             if submission.is_dir():
                 logging.debug("Found %s", submission)
