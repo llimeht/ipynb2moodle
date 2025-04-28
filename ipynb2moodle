@@ -49,6 +49,7 @@ Notes:
      <policy domain="resource" name="height" value="40KP"/>
 """
 
+import json
 import logging
 from pathlib import Path
 import shutil
@@ -73,6 +74,30 @@ def shell_step(*args, **kwargs):
     )
     if proc.returncode != 0:
         raise ConversionException(proc)
+
+
+def fixipynb(infile, outfile):
+    # fix up some things in some Colab files that cause nbconvert to break
+    try:
+        with open(infile, "rt", encoding="UTF-8") as fh:
+            f = json.load(fh)
+
+        # the state for widgets needs to be removed
+        if "widgets" in f["metadata"]:
+            del f["metadata"]["widgets"]
+            # the file format used might be v4.5 but is reported as v4.4 which causes errors
+            f["nbformat_minor"] = 5
+
+        with open(outfile, "wt", encoding="UTF-8") as fh:
+            json.dump(f, fh, indent=2, ensure_ascii=False)
+
+    except UnicodeDecodeError as e:
+        logging.error("Fixups: opening file failed '%s' - not a text file", infile)
+        raise ConversionException(str(e))
+
+    except Exception as e:
+        logging.error("Fixups failed: %s", str(e))
+        raise ConversionException(str(e))
 
 
 def ipynb2html(infile, outfile):
@@ -117,11 +142,13 @@ def submission_converter(infile, username, outdir):
     inpath = Path(infile)
     outpath = Path(outdir) / username
     outpath.mkdir(exist_ok=True)
+    fixfile = outpath / inpath.with_suffix(".cleaned.ipynb").name
     htmlfile = outpath / inpath.with_suffix(".html").name
     imgfile = outpath / inpath.with_suffix(".png").name
     pdffile = outpath / inpath.with_suffix(".pdf").name
 
-    ipynb2html(inpath, htmlfile)
+    fixipynb(inpath, fixfile)
+    ipynb2html(fixfile, htmlfile)
     html2img(htmlfile, imgfile)
     img2pdf(imgfile, pdffile)
 
